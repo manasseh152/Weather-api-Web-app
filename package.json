@@ -1,0 +1,23 @@
+{
+  "name": "weather-api-web-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "sass": "sass -w src/style/scss:src/style/css"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/manasseh152/Weather-api-Web-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/manasseh152/Weather-api-Web-app/issues"
+  },
+  "homepage": "https://github.com/manasseh152/Weather-api-Web-app#readme",
+  "devDependencies": {
+    "sass": "^1.51.0"
+  }
+}
