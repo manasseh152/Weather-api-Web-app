@@ -16,12 +16,43 @@
 
   <script src="./src/modules/axios.min.js"></script>
   <script src="./src/modules/luxon.min.js"></script>
-  <script src="./src/js/app.js"></script>
+  <script defer src="./src/js/app.js"></script>
 </head>
 
 <body>
-  <div class="wheater-container">
-    <button class="wheater-item">Your location</button>
+  <ul class="weather-container">
+  </ul>
+  <button data-toggel-add-location class="bottom-left">
+    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="var(--text-2)">
+      <path d="M0 0h24v24H0V0z" fill="none" />
+      <path
+        d="M18 13h-5v5c0 .55-.45 1-1 1s-1-.45-1-1v-5H6c-.55 0-1-.45-1-1s.45-1 1-1h5V6c0-.55.45-1 1-1s1 .45 1 1v5h5c.55 0 1 .45 1 1s-.45 1-1 1z" />
+    </svg>
+  </button>
+  <div data-info-location>
+    <nav data-info-nav>
+      <!-- <button data-info-remove-button>remove</button> -->
+      <button data-info-add-button>add</button>
+      <input data-add-location-input type="text">
+      <button data-add-location-button>
+        <svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M13.5792 11.9497H12.721L12.4168 11.6564C13.4814 10.418 14.1224 8.81018 14.1224 7.06118C14.1224 3.16124 10.9611 0 7.06118 0C3.16124 0 0 3.16124 0 7.06118C0 10.9611 3.16124 14.1224 7.06118 14.1224C8.81018 14.1224 10.418 13.4814 11.6564 12.4168L11.9497 12.721V13.5792L17.3814 19L19 17.3814L13.5792 11.9497ZM7.06118 11.9497C4.3562 11.9497 2.17267 9.76615 2.17267 7.06118C2.17267 4.3562 4.3562 2.17267 7.06118 2.17267C9.76615 2.17267 11.9497 4.3562 11.9497 7.06118C11.9497 9.76615 9.76615 11.9497 7.06118 11.9497Z"
+            fill="var(--text-2)" />
+        </svg>
+      </button>
+    </nav>
+    <div class="info-container">
+      <div data-info-current>
+        <h3>Current</h3>
+      </div>
+      <div data-info-hourly>
+        <h3>Hourly</h3>
+      </div>
+      <div data-info-Daily>
+        <h3>Daily</h3>
+      </div>
+    </div>
   </div>
 </body>
 
