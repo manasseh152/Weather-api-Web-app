@@ -1,133 +1,149 @@
-const DateTime = luxon.DateTime;
-const localStorageName = 'locations'
+// api keys
+const openWeatherKey = 'c8ede0dabcc8a2159f5fd8390b1c9bb4';
+const timezonedbKey = 'N1UY3YTWJI2S';
 
-let locations = [];
+// api url
+const baseUrl = 'https://api.openweathermap.org';
+const weatherUrl = `${baseUrl}/data/2.5/weather`;
+const openWeatherReverse = `${baseUrl}/geo/1.0/reverse`;
+const openWeatherDirect = `${baseUrl}/geo/1.0/direct`;
 
-// Api keys ↓
-const openWeatherKey = 'c8ede0dabcc8a2159f5fd8390b1c9bb4'
-const timezonedbKey = 'N1UY3YTWJI2S'
+// helper functions
 
-// DOM elements ↓
-const weatherUl = document.querySelector('.weather-container')
-
-
-// Functions ↓
-const addOneCity = (name) => {
-  const currentLocations = [...weatherUl.querySelectorAll('.weather-item')];
-  if (currentLocations.find(o => o.getAttribute('data-location').toLowerCase() === name.toLowerCase())) return console.log('location is al toe gevoegd');
-  let button = document.createElement('button')
-  button.setAttribute('data-location', name)
-  button.setAttribute('onclick', `openWeather('${name}')`)
-  button.classList.add('weather-item');
-  button.innerHTML = name
-  appendChild(weatherUl, button);
-  if (locations.find(o => o == name)) return console.log('bestaat all');
-  saveToLocal(name, localStorageName);
+const checkIfInlocalStorage = (nameSaved) => {
+  if (localStorage.getItem(nameSaved)) return true;
+  return false;
 }
 
-const openWeather = (city) => {
-  getWeatherByCity(city)
-  document.querySelector('[data-info-location]').classList.toggle('active');
-  document.querySelector('[data-toggel-add-location]').classList.toggle('active');
+const checkForGeolocateSupport = () => {
+  if (navigator.geolocation) return true;
+  return false;
 }
 
-const loadFirstTime = () => {
-  locations = getFromLocal(localStorageName)
-  locations.forEach(element => addOneCity(element))
-}
+// functions
 
-const loadWeatherData = (weather) => {
-  const current = document.querySelector('[data-info-current]');
-  current.innerHTML = `
-  <h3>Current</h3>
-  <p data-info-city="${weather.name}">${weather.name}</p>
-  <p>${weather.main.temp}°</p>
-  <p>${weather.weather[0].description}</p>
-  <div>
-    <div>
-      <p>Feel:</p>
-      <p>${weather.main.feels_like}°</p>
-    </div>
-    <div>
-      <p>Humidity:</p>
-      <p>${weather.main.humidity}</p>
-    </div>
-    <div>
-      <p>Clouds:</p>
-      <p>${weather.clouds.all}</p>
-    </div>
-  </div>
-  `
-}
-
-const saveToLocal = (arr, saveName) => {
-  locations.push(arr)
-  const jsonarr = JSON.stringify(locations);
-  localStorage.setItem(saveName, jsonarr);
+const saveToLocal = (opject, array, saveName) => {
+  array.push(opject);
+  localStorage.setItem(saveName, JSON.stringify(array));
 }
 
 const getFromLocal = (nameSaved) => {
-  const str = localStorage.getItem(nameSaved);
-  return JSON.parse(str)
-}
-
-const appendChild = (element, child) => {
-  element.appendChild(child);
-}
-
-const success = (pos) => {
-  getCityByLonLat(pos.coords.longitude, pos.coords.latitude)
+  return JSON.parse(localStorage.getItem(nameSaved))
 }
 
 const getWeatherByCity = async (city, units = 'metric') => {
-  await axios(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${openWeatherKey}&units=${units}`).then(response => loadWeatherData(response.data));
+  await axios(`${weatherUrl}?q=${city}&appid=${openWeatherKey}&units=${units}`).then(response => console.log(response.data));
 }
 
 const getCityByLonLat = async (lon, lat, limit = 1) => {
-  await axios(`http://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=${limit}&appid=${openWeatherKey}`).then(response => addOneCity(response.data[0].name));
+  await axios(`${openWeatherReverse}?lat=${lat}&lon=${lon}&limit=${limit}&appid=${openWeatherKey}`).then(response => {
+    setChoosLocation(response.data)
+    document.querySelector('[data-dialog="choose-location"]').showModal();
+  });
 }
 
-const getWeather = (longitude = undefined, latitude = undefined, city = undefined, units = undefined) => {
-  if (!longitude == undefined && !latitude == undefined && city == undefined) {
-    getWeatherByLongitude(longitude, latitude, units)
+const getCityByCityNameOrCountry = async (city, country) => {
+  let query;
+  if (city && country) {
+    query = `${city},${country}`;
+  } else if (!city) {
+    query = `${country}`;
+  } else {
+    query = `${city}`;
   }
-  if (!city == undefined) {
-    getWeatherByCity(city, units)
-  }
+  await axios(`${openWeatherDirect}?q=${query}&appid=${openWeatherKey}&limit=5&appid=${openWeatherKey}`).then(response => {
+    setChoosLocation(response.data);
+    document.querySelector('[data-dialog="choose-location"]').showModal();
+  });
 }
 
-
-// Run on load ↓
-if (localStorage.getItem(localStorageName) != undefined) {
-  loadFirstTime()
+const getLocationFromBrowser = () => {
+  navigator.geolocation.getCurrentPosition((pos) => {
+    getCityByLonLat(pos.coords.longitude, pos.coords.latitude, 5);
+  }, (err) => {
+    console.log(err)
+  });
 }
 
-// Check for browser support ↓
-if ('geolocation' in navigator) {
-  if (navigator.geolocation) navigator.geolocation.getCurrentPosition(success);
+const setChoosLocation = (data) => {
+  console.log(data);
+  document.querySelector('[data-result="choose-location"]').innerHTML = '';
+  data.forEach(place => {
+    let li = document.createElement('li');
+    li.innerHTML = `
+    <label>
+      <input type="checkbox" name="locations" value="${place.name}">
+      <span>
+        <h4>${place.name}</h4>
+        <p>${place.state}, ${place.country}</p>
+      </span>
+    </label>`
+    document.querySelector('[data-result="choose-location"]').appendChild(li);
+  });
 }
 
-document.querySelector('[data-toggel-add-location]').addEventListener('click', () => {
-  document.querySelector('[data-info-location]').classList.toggle('active');
-  document.querySelector('[data-toggel-add-location]').classList.toggle('active');
+document.querySelectorAll('[data-open-dialog]').forEach(button => {
+  button.addEventListener('click', () => {
+    const target = button.getAttribute('data-open-dialog');
+    const dialog = document.querySelector(`[data-dialog="${target}"]`);
+    if (button.getAttribute('data-action') === 'getUserLocation') return getLocationFromBrowser();
+    dialog.showModal();
+  })
 });
 
-document.querySelector('[data-add-location-button]').addEventListener('click', () => {
-  getWeatherByCity(document.querySelector('[data-add-location-input]').value)
-  document.querySelector('[data-add-location-input]').value = '';
+document.querySelectorAll('[data-close-dialog]').forEach(button => {
+  button.addEventListener('click', () => {
+    const target = button.getAttribute('data-close-dialog');
+    const dialog = document.querySelector(`[data-dialog="${target}"]`);
+    dialog.close();
+  })
 });
 
-document.querySelector('[data-info-add-button]').addEventListener('click', () => {
-  document.querySelector('[data-info-location]').classList.toggle('active');
-  document.querySelector('[data-toggel-add-location]').classList.toggle('active');
-  const location = document.querySelector('[data-info-city]');
-  const city = location.getAttribute('data-info-city')
-  addOneCity(city)
-});
+document.querySelectorAll('[data-form]').forEach(form => {
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const target = form.getAttribute('data-form');
+    const dialog = document.querySelector(`[data-dialog="${target}"]`);
 
-document.querySelector('[data-add-location-input]').addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    getWeatherByCity(document.querySelector('[data-add-location-input]').value)
-    document.querySelector('[data-add-location-input]').value = '';
-  }
+    if (target === 'choose-location') {
+      const results = form.querySelectorAll('[name="locations"]');
+      const units = form.querySelector('[name="units"]').value;
+
+      results.forEach(result => {
+        if (result.checked) {
+          const city = result.value;
+          getWeatherByCity(city, units);
+          dialog.close();
+        } else {
+          console.log('no result selected');
+        }
+      });
+
+    }
+
+    if (target === 'choose-city-country') {
+      // event.preventDefault();
+      const city = form.querySelector('[name="cityName"]').value;
+      const country = form.querySelector('[name="country"]').value;
+      const error = document.querySelector('[data-choose-city-country-error]');
+      const errors = [];
+      if (city.length == 0 && country.length == 0) {
+        errors.push('please enter a city and or country');
+      } else if (city.length < 2 && !country) {
+        errors.push('please enter a valid city');
+      } else if (!country.length == 2 && !city) {
+        errors.push('please enter a valid country');
+      }
+
+      if (!errors.length == 0) {
+        console.log(errors);
+        return error.innerHTML = errors.join('<br>');
+      }
+      // console.log(city, country);
+      error.innerHTML = '';
+      getCityByCityNameOrCountry(city, country);
+      city.value = '';
+      country.value = '';
+    }
+  })
 });
