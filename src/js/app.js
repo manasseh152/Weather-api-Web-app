@@ -8,6 +8,8 @@ const weatherUrl = `${baseUrl}/data/2.5/weather`;
 const openWeatherReverse = `${baseUrl}/geo/1.0/reverse`;
 const openWeatherDirect = `${baseUrl}/geo/1.0/direct`;
 
+let searchResults = [];
+
 // helper functions
 
 const checkIfInlocalStorage = (nameSaved) => {
@@ -31,30 +33,26 @@ const getFromLocal = (nameSaved) => {
   return JSON.parse(localStorage.getItem(nameSaved))
 }
 
-const getWeatherByCity = async (city, units = 'metric') => {
-  await axios(`${weatherUrl}?q=${city}&appid=${openWeatherKey}&units=${units}`).then(response => console.log(response.data));
+const getWeatherByLongitude = async (longitude, latitude, units = 'metric') => {
+  await axios(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${openWeatherKey}&units=${units}`).then(response => console.log(response.data));
 }
 
 const getCityByLonLat = async (lon, lat, limit = 1) => {
-  await axios(`${openWeatherReverse}?lat=${lat}&lon=${lon}&limit=${limit}&appid=${openWeatherKey}`).then(response => {
-    setChoosLocation(response.data)
-    document.querySelector('[data-dialog="choose-location"]').showModal();
-  });
+  await axios(`${openWeatherReverse}?lat=${lat}&lon=${lon}&limit=${limit}&appid=${openWeatherKey}`).then(response => openSearchResults(response.data));
 }
 
-const getCityByCityNameOrCountry = async (city, country) => {
-  let query;
-  if (city && country) {
-    query = `${city},${country}`;
-  } else if (!city) {
-    query = `${country}`;
-  } else {
-    query = `${city}`;
-  }
-  await axios(`${openWeatherDirect}?q=${query}&appid=${openWeatherKey}&limit=5&appid=${openWeatherKey}`).then(response => {
-    setChoosLocation(response.data);
-    document.querySelector('[data-dialog="choose-location"]').showModal();
-  });
+const getCityByQuery = async (query) => {
+  await axios(`${openWeatherDirect}?q=${query}&limit=5&appid=${openWeatherKey}`).then(response => openSearchResults(response.data));
+}
+
+const getLocationFromCountry = () => {
+  const city = document.querySelector('#city').value;
+  const country = document.querySelector('#country').value;
+
+  if (city && country) return getCityByQuery(`${city},${country}`);
+  if (city) return getCityByQuery(city);
+  if (country) return getCityByQuery(country);
+  alert('Please enter a city and or country');
 }
 
 const getLocationFromBrowser = () => {
@@ -65,85 +63,101 @@ const getLocationFromBrowser = () => {
   });
 }
 
-const setChoosLocation = (data) => {
-  console.log(data);
-  document.querySelector('[data-result="choose-location"]').innerHTML = '';
-  data.forEach(place => {
+const openSearchResults = (data) => {
+  const searchResultsUL = document.querySelector('#search-results-ul');
+  const dialog = document.querySelector('[data-popup="search-results"]');
+
+  searchResultsUL.innerHTML = '';
+
+  searchResults = data
+  data.forEach(location => {
+    const city = location.name,
+      state = location.state,
+      country = location.country,
+      lat = location.lat,
+      lon = location.lon;
+
     let li = document.createElement('li');
-    li.innerHTML = `
-    <label>
-      <input type="checkbox" name="locations" value="${place.name}">
-      <span>
-        <h4>${place.name}</h4>
-        <p>${place.state}, ${place.country}</p>
-      </span>
-    </label>`
-    document.querySelector('[data-result="choose-location"]').appendChild(li);
-  });
+    li.setAttribute('data-search-result', '');
+    let innerHtml = `
+    <li data-search-result>
+      <label>
+        <input type="radio" name="city" value="${city}" id="${city}">
+        <span>
+          <h4>${city}</h4>
+          <h5>${state}, ${country}</h5>
+          <p>lat:${lat} lon:${lon}</p>
+        </span>
+      </label>
+    </li>`;
+    li.innerHTML = innerHtml;
+    searchResultsUL.appendChild(li);
+  })
+
+  dialog.showModal();
+};
+
+const displayMessage = (message, querySelector) => {
+  const messageElement = document.querySelector(querySelector);
+  messageElement.innerHTML = message;
 }
 
-document.querySelectorAll('[data-open-dialog]').forEach(button => {
+// event listeners
+
+document.querySelectorAll('[data-clear]').forEach(button => {
+  button.addEventListener('click', (e) => {
+    const target = button.getAttribute('data-clear');
+    if (document.querySelector(`#${target}`)) {
+      document.querySelector(`#${target}`).value = '';
+    } else if (document.querySelector(`.${target}`)) {
+      document.querySelector(`.${target}`).innerHTML = '';
+    } else {
+      document.querySelector(`[${target}]`).value = '';
+    }
+  });
+});
+
+document.querySelectorAll('[data-get-location]').forEach(button => {
   button.addEventListener('click', () => {
-    const target = button.getAttribute('data-open-dialog');
-    const dialog = document.querySelector(`[data-dialog="${target}"]`);
-    if (button.getAttribute('data-action') === 'getUserLocation') return getLocationFromBrowser();
-    dialog.showModal();
+    if (button.getAttribute('data-get-location') === 'browser') {
+      return getLocationFromBrowser();
+    }
+    if (button.getAttribute('data-get-location') === 'country') {
+      return getLocationFromCountry();
+    }
+    return console.log('error');
   })
 });
 
-document.querySelectorAll('[data-close-dialog]').forEach(button => {
+document.querySelectorAll('[data-back-buttons]').forEach(button => {
   button.addEventListener('click', () => {
-    const target = button.getAttribute('data-close-dialog');
-    const dialog = document.querySelector(`[data-dialog="${target}"]`);
-    dialog.close();
-  })
+    const target = button.getAttribute('data-back-buttons');
+    document.querySelector(`[data-popup="${target}"]`).close();
+  });
 });
 
-document.querySelectorAll('[data-form]').forEach(form => {
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const target = form.getAttribute('data-form');
-    const dialog = document.querySelector(`[data-dialog="${target}"]`);
+document.querySelectorAll('[data-submit-buttons]').forEach(button => {
+  button.addEventListener('click', () => {
+    const radioInputs = document.querySelectorAll('[name="city"]');
+    const target = button.getAttribute('data-submit-buttons');
+    const dataPopup = document.querySelector(`[data-popup="${target}"]`);
 
-    if (target === 'choose-location') {
-      const results = form.querySelectorAll('[name="locations"]');
-      const units = form.querySelector('[name="units"]').value;
+    if (target === 'search-results') {
+      const unit = document.querySelector('#unit').value;
+      if (!unit === 'imperial' || !unit === 'metric') return alert('Please select a unit');
+      radioInputs.forEach(input => {
+        if (input.checked) {
+          const city = input.value,
+            locationData = searchResults.find(location => location.name === city),
+            lat = locationData.lat,
+            lon = locationData.lon;
 
-      results.forEach(result => {
-        if (result.checked) {
-          const city = result.value;
-          getWeatherByCity(city, units);
-          dialog.close();
-        } else {
-          console.log('no result selected');
+          getWeatherByLongitude(lon, lat, unit);
+          return dataPopup.close();
         }
       });
-
+    } else {
+      alert('error');
     }
-
-    if (target === 'choose-city-country') {
-      // event.preventDefault();
-      const city = form.querySelector('[name="cityName"]').value;
-      const country = form.querySelector('[name="country"]').value;
-      const error = document.querySelector('[data-choose-city-country-error]');
-      const errors = [];
-      if (city.length == 0 && country.length == 0) {
-        errors.push('please enter a city and or country');
-      } else if (city.length < 2 && !country) {
-        errors.push('please enter a valid city');
-      } else if (!country.length == 2 && !city) {
-        errors.push('please enter a valid country');
-      }
-
-      if (!errors.length == 0) {
-        console.log(errors);
-        return error.innerHTML = errors.join('<br>');
-      }
-      // console.log(city, country);
-      error.innerHTML = '';
-      getCityByCityNameOrCountry(city, country);
-      city.value = '';
-      country.value = '';
-    }
-  })
+  });
 });
